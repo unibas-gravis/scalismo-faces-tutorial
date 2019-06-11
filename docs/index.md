@@ -27,8 +27,14 @@ libraryDependencies ++=
 
 ### Tutorials
 
-* [Tutorial 1](tutorials/coming-soon.html): Hello Scalismo-Faces
+#### Basics - Images, Meshes & GUI-Blocks
 
+The following tutorials guides you through our two most basic data structures when dealing with images and rendering: images and meshes. We call an image, as e.g. a photograph, a *pixel image*. The mesh structure is identical to the mesh used in Scalismo. However, we add color and work with normals extensively and thus introduce *values* defined *on* the mesh surface.
+
+Further, interwoven you will also get to know the basic GUI functionality of Scalismo-Faces. It allows you to create simple windows, mainly for visualization but also with basic interaction, very easily.
+
+* [Tutorial 1](tutorials/tutorial001.html): Images
+* [Tutorial 2](tutorials/coming-soon.html): Meshes
 
 
 ### Other guides

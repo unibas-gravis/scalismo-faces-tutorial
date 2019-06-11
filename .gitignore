@@ -5,5 +5,5 @@ target
 project/target
 .idea
 datasets
-docs/tutorials
 docs/*.md
+colorgradient.png
