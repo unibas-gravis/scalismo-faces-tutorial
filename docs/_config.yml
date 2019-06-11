@@ -1,0 +1,7 @@
+theme: jekyll-theme-slate
+
+title: Scalismo-Faces Tutorial
+description: 'An introduction to the Scalismo-Faces library'
+
+includes_dir     : ./_includes
+layouts_dir: ./_layouts

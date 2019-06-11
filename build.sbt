@@ -12,7 +12,7 @@ resolvers += Resolver.bintrayRepo("unibas-gravis", "maven")
 resolvers += Opts.resolver.sonatypeSnapshots
 
 libraryDependencies  ++= Seq(
-            "ch.unibas.cs.gravis" %% "scalismo-faces" % "0.10.1"
+            "ch.unibas.cs.gravis" %% "scalismo-faces" % "0.10.1",
             "ch.unibas.cs.gravis" %% "scalismo-ui" % "0.13.0"
 )
 
