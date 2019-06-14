@@ -1,46 +1,62 @@
 ## Meshes
 
-The basic data structure for surface representation is called a *mesh*. You already encountered meshes in shape modeling. A mesh represents a surface by *triangulation*. The mesh surface is a collection of triangles and their support points (called a *vertex*).
+The basic data structure for surface representation is called a *mesh*. You hopefully already encountered meshes in scalismo. A mesh represents a surface by *triangulation*. The mesh surface is a collection of triangles and their support points (called a *vertex*).
 
-```tut:silent
+<!--- In our software a point is represented with the class `Point`, a triangle with the class `TriangleCell`. Further we provide a class `TriangleList` to hold all triangles and the `TriangleMesh` class to represent a mesh. ---->
+
+```scala
 import scalismo.common._
 import scalismo.geometry._
 import scalismo.mesh._
 
-// three vertex points for a single triangle
-val points = IndexedSeq(Point(-100.0, 100.0, 0.0), Point(-95.0, -5.0, 0.0), Point(85.0, 0.0, 10.0), Point(90.0, 110.0, -10.0))
-// a single triangle: PointIds refer to point indices in above point sequence
+val points = IndexedSeq(
+  Point(-100.0, 100.0, 0.0),
+  Point(-95.0, -5.0, 0.0),
+  Point(85.0, 0.0, 10.0),
+  Point(90.0, 110.0, -10.0)
+)
+
 val triangles = IndexedSeq(
   TriangleCell(PointId(0), PointId(1), PointId(2)),
   TriangleCell(PointId(2), PointId(3), PointId(0))
 )
 
-// create the mesh: point sequence and triangulation
 val triangulation = TriangleList(triangles)
 val mesh = TriangleMesh3D(points, triangulation)
 ```
 
-The convention is counter-clockwise winding for triangles. If you get that wrong the normals of the mesh might point inwards instead of outwards and some visibility tests might fail.
+We use the convention that a triangle is counter-clockwise oriented. If you get that wrong the normals of the mesh might point inwards instead of outwards and some visibility tests might fail.
 
-You already know how to display and study 3D meshes using the ScalismoUI. In this tutorial, we will gradually develop what is required to generate a rendering of a mesh and will thus create the images ourselves. For the beginning, you can use our pre-fabricated mesh rendering function (You will understand every part of it at the end of this block).
+In this tutorial, we will gradually develop what is required to generate a rendering of a mesh and will thus create the images ourselves. For the beginning, you can use our pre-fabricated mesh rendering function (You will understand every part of it at the end of this block).
 
-```tut:silent
+```scala
+import scalismo.faces.gui._
+import scalismo.faces.gui.GUIBlock._
+import scalismo.color._
 import scalismo.faces.parameters._
 import scalismo.faces.mesh._
-import java.awt.Color
 
 val simpleImage = ParametricRenderer.renderParameterMesh(
   RenderParameter.defaultSquare,
-  ColorNormalMesh3D(mesh, TriangleProperty(mesh.triangulation, IndexedSeq(RGBA(Color.ORANGE), RGBA(Color.BLUE))), mesh.cellNormals)
+  ColorNormalMesh3D(
+    mesh,
+    TriangleProperty(mesh.triangulation, IndexedSeq(
+      RGBA(1,0,0),
+      RGBA(0,1,0)
+    )),
+    mesh.cellNormals
+  )
 )
 
 ImagePanel(simpleImage).displayIn("Mesh")
 ```
 
-The mesh is very simple, it only contains two triangles. It is much more interesting to study a
+The mesh is very simple, it only contains two triangles.
+It is much more interesting to study a
 real face mesh with many triangles and points.
 
-```tut:silent
+```scala
+import java.io.File
 import scalismo.faces.io.MeshIO
 
 // as always, IO is guarded by Try, we only want to read the raw mesh (".shape")
@@ -56,10 +72,10 @@ ImagePanel(faceImage).displayIn("Mesh")
 
 The mesh supports geometric operations, such as transformations.
 
-```tut:silent
+```scala
 import scalismo.faces.render._
 
-val rotatedFace = face.transform(Rotation3D(math.Pi/4.0, Vector3D.unitY).apply)
+val rotatedFace = face.transform(Rotation3D(math.Pi/4.0, EuclideanVector3D.unitY).apply)
 val rotFaceImage = ParametricRenderer.renderParameterMesh(
   RenderParameter.defaultSquare,
   ColorNormalMesh3D(rotatedFace, ConstantProperty(rotatedFace.triangulation, RGBA(0.9)), rotatedFace.cellNormals)
@@ -73,13 +89,13 @@ A parametrized surface allows us to define values for *every point* on the surfa
 
 The most basic property available for every mesh is the continuous representation of the surface itself. For every `TriangleId` and `BarycentricCoordinate`, it returns the position in space at the specified point on the surface.
 
-```tut:silent
+```scala
 val noseTip = face.position.onSurface(TriangleId(2), BarycentricCoordinates(0.0, 1.0, 0.0))
 ```
 
 Mesh normals are also available from scratch, both vertex and cell normals.
 
-```tut:silent
+```scala
 val noseNormal = face.vertexNormals.onSurface(TriangleId(2), BarycentricCoordinates(0.0, 1.0, 0.0))
 println(noseNormal)
 ```
@@ -93,13 +109,16 @@ There are many different implementations of a `MeshSurfaceProperty`. They are st
 
 For most of these property types, the companion object offers methods to construct / sample from other property types. This is, for example, very useful to average cell normals at each vertex to get vertex-based normals:
 
-```tut:silent
+```scala
 val vertexNormals = SurfacePointProperty.averagedPointProperty(face.cellNormals)
 ```
 
 There are specific types for a few very important choices of surface properties
 
-```tut:silent
+```scala
+import scalismo.utils._
+val rnd = Random(98)
+
 // VertexColorMesh: "per-vertex" color on a mesh / SurfacePointProperty for color
 // randomly color a mesh: random color for each vertex
 val randomColors = IndexedSeq.fill(face.pointSet.numberOfPoints)(

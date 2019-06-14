@@ -34,7 +34,7 @@ The following tutorials guides you through our two most basic data structures wh
 Further, interwoven you will also get to know the basic GUI functionality of Scalismo-Faces. It allows you to create simple windows, mainly for visualization but also with basic interaction, very easily.
 
 * [Tutorial 1](tutorials/tutorial001.html): Images
-* [Tutorial 2](tutorials/coming-soon.html): Meshes
+* [Tutorial 2](tutorials/tutorial002.html): Meshes
 
 
 ### Other guides
