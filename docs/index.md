@@ -27,7 +27,7 @@ libraryDependencies ++=
 
 ### Tutorials
 
-#### Basics - Images, Meshes & GUI-Blocks
+#### Basics - Images, Meshes, Model, Rendering & GUI-Blocks
 
 The following tutorials guides you through our two most basic data structures when dealing with images and rendering: images and meshes. We call an image, as e.g. a photograph, a *pixel image*. The mesh structure is identical to the mesh used in Scalismo. However, we add color and work with normals extensively and thus introduce *values* defined *on* the mesh surface.
 
@@ -35,6 +35,8 @@ Further, interwoven you will also get to know the basic GUI functionality of Sca
 
 * [Tutorial 1](tutorials/tutorial001.html): Images
 * [Tutorial 2](tutorials/tutorial002.html): Meshes
+* [Tutorial 3](tutorials/tutorial003.html): Face Model
+* [Tutorial 4](tutorials/tutorial004.html): Rendering
 
 
 ### Other guides

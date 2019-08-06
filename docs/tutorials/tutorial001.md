@@ -1,4 +1,4 @@
-## Images
+# Images
 
 Computer graphics deals with the artificial generation of images. In this first article, you can explore how the Scalismo-faces framework handles images. Our approach is different from what you might know from other graphics frameworks. To us, images are highly functional and generic structures. You will see how such an understanding can simplify working with images drastically.
 

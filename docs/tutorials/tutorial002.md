@@ -1,15 +1,16 @@
-## Meshes
+# Meshes
 
-The basic data structure for surface representation is called a *mesh*. You hopefully already encountered meshes in scalismo. A mesh represents a surface by *triangulation*. The mesh surface is a collection of triangles and their support points (called a *vertex*).
-
-<!--- In our software a point is represented with the class `Point`, a triangle with the class `TriangleCell`. Further we provide a class `TriangleList` to hold all triangles and the `TriangleMesh` class to represent a mesh. ---->
+The basic data structure for surface representation is called a *mesh*.
+You hopefully already encountered meshes in scalismo. A mesh represents
+a surface by *triangulation*. The mesh surface is a collection of
+triangles and their support points (called *vertices*).
 
 ```scala
 import scalismo.common._
 import scalismo.geometry._
 import scalismo.mesh._
 
-val points = IndexedSeq(
+val vertices = IndexedSeq(
   Point(-100.0, 100.0, 0.0),
   Point(-95.0, -5.0, 0.0),
   Point(85.0, 0.0, 10.0),
@@ -22,7 +23,7 @@ val triangles = IndexedSeq(
 )
 
 val triangulation = TriangleList(triangles)
-val mesh = TriangleMesh3D(points, triangulation)
+val mesh = TriangleMesh3D(vertices, triangulation)
 ```
 
 We use the convention that a triangle is counter-clockwise oriented. If you get that wrong the normals of the mesh might point inwards instead of outwards and some visibility tests might fail.
@@ -70,18 +71,25 @@ val faceImage = ParametricRenderer.renderParameterMesh(
 ImagePanel(faceImage).displayIn("Mesh")
 ```
 
-The mesh supports geometric operations, such as transformations.
+You can change a mesh in different ways. We recommend to change a
+mesh by applying a transformation of type `Point[_3D] => Point[_3D]`.
+In the following we specify a geometric transformation, a rotation,
+you should already be familiar with if you went throught the tutorial
+for scalismo:
 
 ```scala
 import scalismo.faces.render._
 
-val rotatedFace = face.transform(Rotation3D(math.Pi/4.0, EuclideanVector3D.unitY).apply)
+val rotatedFace = face.transform(
+  Rotation3D(math.Pi/4.0, EuclideanVector3D.unitY).apply
+  )
 val rotFaceImage = ParametricRenderer.renderParameterMesh(
   RenderParameter.defaultSquare,
   ColorNormalMesh3D(rotatedFace, ConstantProperty(rotatedFace.triangulation, RGBA(0.9)), rotatedFace.cellNormals)
 )
 ImagePanel(rotFaceImage).displayIn("Mesh")
 ```
+
 
 A mesh defines a surface *parametrization* through its triangulation. Every point on the surface is characterized by the *triangle* it lies in and *barycentric coordinates* within the triangle. The triangle is identified through its `TriangledId` which is its index in the triangulation list.
 
@@ -114,6 +122,7 @@ val vertexNormals = SurfacePointProperty.averagedPointProperty(face.cellNormals)
 ```
 
 There are specific types for a few very important choices of surface properties
+
 
 ```scala
 import scalismo.utils._
