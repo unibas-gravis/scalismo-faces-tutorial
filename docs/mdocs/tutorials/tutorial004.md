@@ -1,11 +1,11 @@
 # Model Rendering
 
-```tut:silent
+```scala mdoc:silent
+import scalismo.color._
 import scalismo.common._
 import scalismo.geometry._
 import scalismo.mesh._
 import scalismo.utils.Random
-import scalismo.faces.color._
 import scalismo.faces.image._
 import scalismo.faces.parameters._
 import scalismo.faces.render._
@@ -32,7 +32,7 @@ The general renderer of the framework (called `TriangleRenderer`) can be configu
 
 In order to get a comparable and understandable scene setup, we use a pre-defined parametrization. All parameters describing a 3D scene of a single face are collected in a `RenderParameter`. The parametrization offers a tractable way of dealing with the geometric transformation part and also for shading using standard illumination models.
 
-```tut:silent
+```scala mdoc:silent
 // load the mesh to render
 val faceMesh = MeshIO.read(new File("data/rough_face.ply")).get.shape
 
@@ -70,14 +70,14 @@ A `RenderParameter` describes a face model instance together with the image gene
 
 The class `RenderParameter` provides a default scene for our face model instances.
 
-```tut:silent
+```scala mdoc:silent
 // square, 512x512
 val init = RenderParameter.defaultSquare
 ```
 
 `RenderParameter` supports serialization to files:
 
-```tut:silent
+```scala mdoc:silent
 import scalismo.faces.io._
 
 val paramFile = new File("init-face.rps")
@@ -90,7 +90,7 @@ println("parameter file is identical to standard scene: " + (paramIn == init))
 
 The format is JSON and is thus also easily handled by the language of your choice. We use [spray-json](https://github.com/spray/spray-json), therefore you can access the serialized JSON string directly (or parse from strings).
 
-```tut:silent
+```scala mdoc:silent
 import spray.json._
 import scalismo.faces.io.renderparameters.RenderParameterJSONFormat._
 
@@ -102,7 +102,7 @@ println(init.toJson.prettyPrint)
 
 The face description part of the render parameter refers to the model parameters expansion of the Morphable Model (see [Face Model](04_ComputerGraphics_03_FaceModel.html)). It is of type `MoMoInstance` which is almost identical to `MoMoCoefficients` but uses `IndexedSeq[Double]` for coefficient values and a URI to identify the model. Let us construct the parameter part describing the coefficients-based face from the last section.
 
-```tut:silent
+```scala mdoc:silent
 // load the BFM
 val modelURI = new File("data/model2017-1_face12_nomouth.h5").toURI
 val model = MoMoIO.read(modelURI).get.neutralModel
@@ -111,7 +111,7 @@ val modelRenderer = MoMoRenderer(model, RGBA.WhiteTransparent).cached(5)
 
 The parametric face description requires only coefficients and the model. A concrete mesh instance is not necessary.
 
-```tut:silent
+```scala mdoc:silent
 // the model is parametric: low-rank expansion of a Gaussian Process (~ PCA model)
 // Example: A face with 3 std deviations on first shape and -3 on first color principal component
 val coeffs = MoMoCoefficients(
@@ -140,7 +140,7 @@ println(randomCoeffs.color.toArray.take(5).mkString(", "))
 
 The parametric description requires a `MoMoInstance` rather than naked `MoMoCoefficients`.
 
-```tut:silent
+```scala mdoc:silent
 // the coefficients (+3/-3) face
 val coeffInstance = MoMoInstance.fromCoefficients(coeffs, modelURI)
 
@@ -156,13 +156,13 @@ println("using " + fullInstance.color.length + " color coefficients")
 
 We now place the (+3/-3) face in our default scene. A `RenderParameter` is by default immutable. Replacing a part of it always generates a new instance. Exchanging individual parts of is conveniently available using `with*` methods:
 
-```tut:silent
+```scala mdoc:silent
 val initWithFace = init.withMoMo(fullInstance)
 ```
 
 We can now visualize the faces using the `MoMoRenderer`, which will be explained later.
 
-```tut:silent
+```scala mdoc:silent
 // You will understand the details soon
 // note that this requires the modelURI to identify the model
 def renderFace(face: MoMoInstance): PixelImage[RGBA] = {
@@ -197,7 +197,7 @@ Now, we have the face instance ready. To render it into the image, we have to sp
 
 Each part is described by its own parameters. All of them influence the generated image. However, in a typical fitting application, we only adapt the *pose* and the focal length of the pinhole *camera*.
 
-```tut:silent
+```scala mdoc:silent
 // We define a simple display utility method: It renders and displays a parametrized instance
 // for reference, we always render the initial default setup on the left-hand side
 def displayParameters(params: RenderParameter, reference: RenderParameter): Unit = {
@@ -217,7 +217,7 @@ def displayParameters(params: RenderParameter, reference: RenderParameter): Unit
 The pose of the face places it within the world's coordinate system. It consists of a rigid part with rotation and translation and also allows for isotropic scaling. The parametrization uses 3 angles for yaw (y-axis), pitch (x-axis) and roll (z-axis), a Vector3D for translation and a factor for scaling. In the default scene, the face is 1 meter away from the camera. The default `view` is such that the camera is placed at the (world's) origin and faces the negative z-direction. The upwards axis is aligned with the positive y-direction. Units of length are measured in mm while angles have radian values.
 (Image camera setup)
 
-```tut:silent
+```scala mdoc:silent
 val Pose(scaling, translation, roll, yaw, pitch) = initWithFace.pose
 println("default pose:")
 println(s"scaling=$scaling")
@@ -235,7 +235,7 @@ println("nose is at: " + noseLocation)
 
 We observe the effects of changing some of the parameters of the pose transform:
 
-```tut:silent
+```scala mdoc:silent
 val initPose = initWithFace.pose
 
 // yaw (let the face look sideways, 45 deg)
@@ -243,7 +243,7 @@ val sideView45 = initWithFace.withPose(initPose.withYaw(math.Pi/4.0))
 displayParameters(sideView45, initWithFace)
 
 // translation (move back, 4m away from the camera)
-val backMover = initWithFace.withPose(initPose.withTranslation(Vector(0.0, 0.0, -4000)))
+val backMover = initWithFace.withPose(initPose.withTranslation(EuclideanVector(0.0, 0.0, -4000)))
 displayParameters(backMover, initWithFace)
 ```
 
@@ -253,7 +253,7 @@ The pose affects an image drastically in terms of the pixels a face actually cov
 
 The pinhole camera model only uses few actual parameters. We mainly need the focal length, especially in fitting applications. With sensor-size, you can adapt the camera to match different existing photography systems.
 
-```tut:silent
+```scala mdoc:silent
 val initCamera = initWithFace.camera
 val Camera(focalLength, pp, sensorSize, near, far, orthographic) = initWithFace.camera
 println("default camera:")
@@ -270,17 +270,17 @@ displayParameters(zoomed, initWithFace)
 
 A perspective camera model leads to a non-linear distortion of the image depending on the camera distance. There is a division by the distance involved in the calculation of the image position of a point. The closer the object is to the camera, the stronger the effect is. However, moving an object farther away not only attenuates the perspective effect, it also shrinks the image. To study the effect, we thus *compensate* for the size change by adapting the focal length to ensure an equal apparent size of the face in the image.
 
-```tut:silent
+```scala mdoc:silent
 // close to camera: 50cm
 val closeToCam = initWithFace.
   withCamera(initCamera.copy(focalLength = initCamera.focalLength / 2.0)).
-  withPose(initPose.withTranslation(Vector3D(0.0, 0.0, initPose.translation.z/2.0)))
+  withPose(initPose.withTranslation(EuclideanVector(0.0, 0.0, initPose.translation.z/2.0)))
 println("camera distance: " + -closeToCam.pose.translation.z)
 
 // far away: 4m
 val farAway = initWithFace.
   withCamera(initCamera.copy(focalLength = initCamera.focalLength * 4.0)).
-  withPose(initPose.withTranslation(Vector3D(0.0, 0.0, initPose.translation.z * 4.0)))
+  withPose(initPose.withTranslation(EuclideanVector(0.0, 0.0, initPose.translation.z * 4.0)))
 println("camera distance: " + -farAway.pose.translation.z)
 
 // default distance of 1m
@@ -294,7 +294,7 @@ The effects of camera distance and focal length are very similar but only the ca
 
 The last step of the geometric rendering part is a viewport transformation. The normalized image plane coordinates need to be mapped into the actual pixel grid. Here, only the image size matters. However, you have to be careful to match the aspect ratio of the camera sensor and the image - otherwise you get "non-quadratic" pixels. The pixel size of the image is the number of samples your sensor takes (typically the "Mega pixels").
 
-```tut:silent
+```scala mdoc:silent
 // Our default camera uses a quadratic sensor and thus generates quadratic images
 println("sensor aspect ratio: " + initCamera.sensorSize.x / initCamera.sensorSize.y)
 // you can generate higher or lower resolution images of the same scene
@@ -328,7 +328,7 @@ println("35mm sensor size: " + cam100mm.camera.sensorSize)
 
 The geometric rendering part maps every 3D coordinate to its corresponding 2D image pixel coordinates. However, the reverse transformation, finding a surface point for each image pixel, is required to paint an image. In most rendering engines, this is achieved by rasterization. The process determines the matching surface point by identifying pixels and surface points by their `TriangledId` and `BarycentricCoordinates` within that triangle. The process is typically triangle-oriented, performed for each triangle of the object. The result can be accessed easily:
 
-```tut:silent
+```scala mdoc:silent
 import TriangleRenderer.TriangleFragment
 
 // create buffer holding all correspondence information in the form of a `TriangleFragment`
@@ -353,7 +353,7 @@ surfaceImageCorr.toImage(255, 255) match {
 
 The correspondence information can be used to draw the image: Just *paint* the pixel using the color of the surface at the specified position!
 
-```tut:silent
+```scala mdoc:silent
 val selfRendering = surfaceImageCorr.toImage.map{
   case Some(TriangleFragment(_, triangleId, worldBCC, _, _, _, _)) =>
     // get color at specified surface point
@@ -369,16 +369,16 @@ Shading is the second part of rendering. Once image-to-surface correspondence ha
 
 In our framework, we mainly use an efficient empirical model using Spherical Harmonics expansion. However, there is also the possibility to use Phong reflectance or more advanced reflectance models (such as Torrence-Sparrow and Oren-Nayar). The Spherical Harmonics (SH) illumination encodes a whole environment map. It captures the light irradiance from every possible direction. The reflectance model behind the SH expansion is typically *Lambertian*.
 
-```tut:silent
+```scala mdoc:silent
 // We can create a simple light situation with directional light and some ambient (constant) contributions:
-val lightDirection = Vector3D.unitZ // illumination directly from the camera direction
+val lightDirection = EuclideanVector3D.unitZ // illumination directly from the camera direction
 val shIllum = SphericalHarmonicsLight.fromAmbientDiffuse(RGB(0.4), RGB(0.6), lightDirection)
 val faceIllum = initWithFace.withEnvironmentMap(shIllum)
 ```
 
 To render an image, we need to create a `PixelShader`. This is the piece of code which calculates the color given a surface correspondence. You wrote this code yourself a few lines above. Shading calculations heavily depend on the *normals* of the surface, therefore we need to supply a colored mesh with normals. `PointShader`, `PixelShader` and a buffer are all we need to render an image:
 
-```tut:silent
+```scala mdoc:silent
 val shShader = faceIllum.pixelShader(face)
 val shRendering = TriangleRenderer.renderMesh(
   face.shape,
@@ -390,7 +390,7 @@ val shRendering = TriangleRenderer.renderMesh(
 
 The result looks very different from our earlier hand-crafted approach:
 
-```tut:silent
+```scala mdoc:silent
 shelf(
   ImagePanel(selfRendering),
   ImagePanel(shRendering)
@@ -399,9 +399,9 @@ shelf(
 
 The orientation of the surface with respect to the light source heavily influences its apparent brightness in the image. The front-facing nose tip is very bright while side-facing back parts of the cheek are considerably darker. We can intensify the difference by illuminating from the side.
 
-```tut:silent
+```scala mdoc:silent
 val rightIllum = initWithFace.withEnvironmentMap(
-  SphericalHarmonicsLight.fromAmbientDiffuse(RGB(0.4), RGB(0.6), Vector3D(2.0, 0.0, 0.5).normalize)
+  SphericalHarmonicsLight.fromAmbientDiffuse(RGB(0.4), RGB(0.6), EuclideanVector(2.0, 0.0, 0.5).normalize)
 )
 displayParameters(rightIllum, initWithFace)
 ```
@@ -412,18 +412,18 @@ The SH illumination model, as implemented, can express arbitrary light distribut
 
 The model also lacks specular highlights. But those are available using a Phong reflectance model. First, you have to turn off the SH contribution or you get the rendering result with both contributions.
 
-```tut:silent
+```scala mdoc:silent
 val specHighlight = initWithFace.noEnvironmentMap.withDirectionalLight(
-  DirectionalLight(RGB(0.4), RGB(0.6), Vector3D(1, 0, 1).normalize, RGB(0.12), 8.0)
+  DirectionalLight(RGB(0.4), RGB(0.6), EuclideanVector(1, 0, 1).normalize, RGB(0.12), 8.0)
 )
 displayParameters(specHighlight, initWithFace)
 ```
 
 Do not overdo it with the specular effects. It can quickly lead to a "glass" head appearance.
 
-```tut:silent
+```scala mdoc:silent
 displayParameters(initWithFace.noEnvironmentMap.withDirectionalLight(
-  DirectionalLight(RGB(0.4), RGB(0.6), Vector3D(1, 0, 1).normalize, RGB(0.4), 100.0)
+  DirectionalLight(RGB(0.4), RGB(0.6), EuclideanVector(1, 0, 1).normalize, RGB(0.4), 100.0)
 ), initWithFace)
 ```
 
@@ -431,7 +431,7 @@ displayParameters(initWithFace.noEnvironmentMap.withDirectionalLight(
 
 You now know how to generate images using `PointShader`s and `PixelShader`s. This is very powerful but often not that convenient when you just want to render a specific parameter instance. For these cases, there is the `MoMoRenderer` which we use for fitting. It is designed to offer simple parametric rendering interfaces for landmarks, images and more.
 
-```tut:silent
+```scala mdoc:silent
 import scalismo.faces.sampling.face._
 
 val momoRenderer = MoMoRenderer(model)
@@ -451,7 +451,7 @@ val cachedRenderer = momoRenderer.cached(5) // cache last 5 rendering calls
 If you want more flexibility and use `RenderParameters` rather to describe
 your scene setup but want to render your *own mesh*, not the model, then you can use the `ParametricRenderer`:
 
-```tut:silent
+```scala mdoc:silent
 val meshRendering = ParametricRenderer.renderParameterVertexColorMesh(init, face)
 ImagePanel(meshRendering).displayIn("Rendering")
 ```

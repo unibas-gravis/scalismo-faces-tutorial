@@ -4,34 +4,58 @@ Gaussian Processes can be very successfully applied to *shape* modeling, as you 
 
 We specify a face by its expansion coefficients within the face model. The model consists of two independent Gaussian Process models for *shape* and *color*. The models are used in a low-rank expansion with a statistical covariance function and a "spherical noise assumption" - called *Probabilistic Principal Components Analysis*. The trait `MoMo` handles this *Morphable Model*.
 
-```tut:silent
+Let us set first some imports and initialize scalismo, as we need the hdf5 library to load a model.
+
+```scala mdoc:silent
+import java.io.File
+
+import scalismo.mesh._
+import scalismo.color._
+import scalismo.common.UnstructuredPointsDomain
 import scalismo.geometry._
+import scalismo.utils.Random
+
 import scalismo.faces.io._
 import scalismo.faces.momo._
 import scalismo.faces.mesh._
 import scalismo.faces.image._
-import scalismo.faces.color._
 import scalismo.faces.parameters._
-
-import java.io.File
 
 // model loading needs the native HDF5 library
 scalismo.initialize()
+// create a seeded random number generator which will be passed implicitly
+implicit val rng = Random(1024L)
+```
 
+Next we load the model from an `URI`:
+```scala mdoc:silent
 val modelURI = new File("data/model2017-1_face12_nomouth.h5").toURI
 val model = MoMoIO.read(modelURI).get
+```
 
+To get a `VertexColorMesh3D` representing the mean of the model, we can
+first get from the models coefficients with all zeros and then use those
+coefficients to generate the instance.
+
+```scala mdoc:silent
 val meanCoeffs = model.zeroCoefficients
-
-// face instances are meshes with per-vertex color: shape and color model instances
-// the mean face:
 val meanFace: VertexColorMesh3D = model.instance(meanCoeffs)
+```
 
-// the probabilistic model allows us to draw a random instance
+The model represents the distribution of faces it was trained with. We
+can draw a random sample from the distribution.
+
+```scala mdoc:silent
 val randomFace = model.sample()
+```
 
-// the model is parametric: low-rank expansion of a Gaussian Process (~ PCA model)
-// Example: A face with 3 std deviations on first shape and -1 on first color principal component
+As convenience, we are free to specify less coefficients than the model
+has components. Remember that the model is a low-rank approximation of a
+Gaussian process or learned from examples using PCA. The coefficients we
+do not specify are treated as zeros. However we can not specify more
+coefficicents than the models rank.
+
+```scala mdoc:silent
 val coeffs = MoMoCoefficients(
   IndexedSeq(3.0, 0.0, 0.0),  // shape
   IndexedSeq(-3.0, 0.0, 0.0), // color
@@ -39,15 +63,23 @@ val coeffs = MoMoCoefficients(
 )
 // generate the model instance
 val coeffFace = model.instance(coeffs)
+```
 
-// We will render meshes a lot. Let's define a function for that
-// You will understand the details of in the next section
+A simple convenience function to render a model instance, that you will
+understand later, can be defined as follows:
+
+```scala mdoc:silent
 def renderFace(face: VertexColorMesh3D): PixelImage[RGBA] = {
   ParametricRenderer.renderParameterVertexColorMesh(
     RenderParameter.defaultSquare,
     face)
 }
+```
 
+Next we use the method to render an the images for the last three meshes
+and display them with the help of the `GUIBlock`s.
+
+```scala mdoc:silent
 import scalismo.faces.gui._
 import GUIBlock._
 
@@ -72,14 +104,14 @@ $$
 
 Because it is essentially a full-rank GP, it is not treated as a real strict low-rank GP. It is a mixture of a parametrized low-rank process with a non-parametric, but closed-form, treatment of the expansion from subspace to full space.
 
-```tut:silent
-val shapeModel: PancakeDLRGP[_3D, Point[_3D]] = model.neutralModel.shape
+```scala mdoc:silent
+val shapeModel: PancakeDLRGP[_3D, UnstructuredPointsDomain[_3D], Point[_3D]] = model.neutralModel.shape
 // the underlying strict low-rank model:
 val shapeLRGP = shapeModel.gpModel
 println("shape rank: " + shapeLRGP.rank +
    ", noise sdev=" + math.sqrt(shapeModel.noiseVariance))
 // the same is true for color with type
-val colorModel: PancakeDLRGP[_3D, RGB] = model.neutralModel.color
+val colorModel: PancakeDLRGP[_3D, UnstructuredPointsDomain[_3D], RGB] = model.neutralModel.color
 println("color rank: " + colorModel.gpModel.rank +
    ", noise sdev=" + math.sqrt(colorModel.noiseVariance))
 
@@ -89,7 +121,7 @@ val fullRankShapeGP = shapeModel.toDiscreteGaussianProcess
 
 You might have noticed `neutralModel` above. A `MoMo` can consist of shape, color and optionally a model for facial expression. The expression model is of type `PancakeDLRGP[_3D, Vector[_3D]]` and describes the *deformation* of the neutral shape. The standard BFM does not have expression and we thus do not discuss it here. Most operations are generic and do not require you to do anything. However, you can specifically get a *neutral* or an *expression* model. Be aware, that  expression also adds a mean deformation and is thus never identical to the fully neutral model, even with all expression coefficients set to `0.0`.
 
-```tut:silent
+```scala mdoc:silent
 val neutralBFM: MoMoBasic = model.neutralModel
 println("Neutral BFM has expressions: " + neutralBFM.hasExpressions)
 
