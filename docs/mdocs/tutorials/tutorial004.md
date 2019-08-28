@@ -22,6 +22,7 @@ import java.io.File
 scalismo.initialize()
 ```
 
+
 In this tutorial block, you will learn about the structure of our renderer and the scene parametrization we use for fitting the model to images.
 
 Rendering an image consists of two main parts. There is the *geometric* transformation which maps 3D positions and structures onto the image plane and there is the *shading* process which finds color values to display in the image. The result of the geometric step is correspondence between image pixel positions and surface points. In the Scalismo framework, we use a rasterizer to find such correspondences.
@@ -200,7 +201,7 @@ Each part is described by its own parameters. All of them influence the generate
 ```scala mdoc:silent
 // We define a simple display utility method: It renders and displays a parametrized instance
 // for reference, we always render the initial default setup on the left-hand side
-def displayParameters(params: RenderParameter, reference: RenderParameter): Unit = {
+def displayParameters(params: RenderParameter, reference: RenderParameter, i: Int): Unit = {
   shelf(
     stack(
       ImagePanel(modelRenderer.renderImage(reference)),
@@ -210,7 +211,7 @@ def displayParameters(params: RenderParameter, reference: RenderParameter): Unit
       ImagePanel(modelRenderer.renderImage(params)),
       label("parameter rendering")
     )
-  ).displayIn("Rendering")
+  ).displayIn(s"Rendering ${i}")
 }
 ```
 
@@ -240,11 +241,11 @@ val initPose = initWithFace.pose
 
 // yaw (let the face look sideways, 45 deg)
 val sideView45 = initWithFace.withPose(initPose.withYaw(math.Pi/4.0))
-displayParameters(sideView45, initWithFace)
+displayParameters(sideView45, initWithFace, 0)
 
 // translation (move back, 4m away from the camera)
 val backMover = initWithFace.withPose(initPose.withTranslation(EuclideanVector(0.0, 0.0, -4000)))
-displayParameters(backMover, initWithFace)
+displayParameters(backMover, initWithFace, 1)
 ```
 
 Note that the face actually occludes *itself* when rotated to the side! The effect is called self-occlusion and appears as soon as a complex object is projected from 3D to 2D. It is very relevant for fitting applications as it prevents a 1:1 correspondence between pixels and the surface. There are always parts you cannot see from the current view. But which parts you can see depends on pose parameters.
@@ -265,7 +266,7 @@ println("orthographic: " + orthographic)
 
 // the focal length affects the scaling of the image ("zoom")
 val zoomed = initWithFace.withCamera(initCamera.copy(focalLength = 15))
-displayParameters(zoomed, initWithFace)
+displayParameters(zoomed, initWithFace, 2)
 ```
 
 A perspective camera model leads to a non-linear distortion of the image depending on the camera distance. There is a division by the distance involved in the calculation of the image position of a point. The closer the object is to the camera, the stronger the effect is. However, moving an object farther away not only attenuates the perspective effect, it also shrinks the image. To study the effect, we thus *compensate* for the size change by adapting the focal length to ensure an equal apparent size of the face in the image.
@@ -299,16 +300,16 @@ The last step of the geometric rendering part is a viewport transformation. The 
 println("sensor aspect ratio: " + initCamera.sensorSize.x / initCamera.sensorSize.y)
 // you can generate higher or lower resolution images of the same scene
 val lowRes = initWithFace.withImageSize(ImageSize(128, 128))
-displayParameters(lowRes, initWithFace)
+displayParameters(lowRes, initWithFace, 4)
 
 // be careful to respect the aspect ratio
 val wrongAspect = initWithFace.withImageSize(ImageSize(256, 128))
-displayParameters(wrongAspect, initWithFace)
+displayParameters(wrongAspect, initWithFace, 5)
 
 // To change the image size but keep the rendered object at constant size:
 // (will add background around or create cropped images)
 val croppedView = initWithFace.forImageSize(256, 128)
-displayParameters(croppedView, initWithFace)
+displayParameters(croppedView, initWithFace, 6)
 
 // You often need to adapt to an image size with a different aspect ratio
 // `fitToImageSize` adapts the aspect ratio of the rendering to match the new image size
@@ -316,7 +317,7 @@ displayParameters(croppedView, initWithFace)
 val broadView = initWithFace.fitToImageSize(512, 768)
 println("broad aspect ratio: " + broadView.imageSize.aspectRatio)
 println("broad sensor aspect: " + broadView.camera.sensorSize.x / broadView.camera.sensorSize.y)
-displayParameters(broadView, initWithFace)
+displayParameters(broadView, initWithFace, 7)
 
 // you can adapt the camera to e.g. 35mm film with 100mm focal length (which might be more
 // familiar to you)
@@ -360,6 +361,9 @@ val selfRendering = surfaceImageCorr.toImage.map{
     face.color.onSurface(triangleId, worldBCC)
   case None => RGBA.BlackTransparent // no visible surface, transparent color
 }
+
+displayParameters(broadView, initWithFace, 77)
+
 ImagePanel(selfRendering).displayIn("Hand-crafted Shading")
 ```
 
@@ -394,7 +398,7 @@ The result looks very different from our earlier hand-crafted approach:
 shelf(
   ImagePanel(selfRendering),
   ImagePanel(shRendering)
-).displayIn("Rendering")
+).displayIn("Rendering A")
 ```
 
 The orientation of the surface with respect to the light source heavily influences its apparent brightness in the image. The front-facing nose tip is very bright while side-facing back parts of the cheek are considerably darker. We can intensify the difference by illuminating from the side.
@@ -403,7 +407,7 @@ The orientation of the surface with respect to the light source heavily influenc
 val rightIllum = initWithFace.withEnvironmentMap(
   SphericalHarmonicsLight.fromAmbientDiffuse(RGB(0.4), RGB(0.6), EuclideanVector(2.0, 0.0, 0.5).normalize)
 )
-displayParameters(rightIllum, initWithFace)
+displayParameters(rightIllum, initWithFace, 8)
 ```
 
 Now, the right cheek lies in dark shadow while the left cheek is clearly illuminated. This kind of shadow is called *attached shadow*. It is not *cast* by a light-occluding object but the result of local normal direction pointing "away" from the light source. Such parts of the surface appear dark because they cannot really *absorb* light energy and thus also do not emit light (unless they are active sources of light).
@@ -413,10 +417,10 @@ The SH illumination model, as implemented, can express arbitrary light distribut
 The model also lacks specular highlights. But those are available using a Phong reflectance model. First, you have to turn off the SH contribution or you get the rendering result with both contributions.
 
 ```scala mdoc:silent
-val specHighlight = initWithFace.noEnvironmentMap.withDirectionalLight(
-  DirectionalLight(RGB(0.4), RGB(0.6), EuclideanVector(1, 0, 1).normalize, RGB(0.12), 8.0)
-)
-displayParameters(specHighlight, initWithFace)
+//val specHighlight = initWithFace.noEnvironmentMap.withDirectionalLight(
+//  DirectionalLight(RGB(0.4), RGB(0.6), EuclideanVector(1, 0, 1).normalize, RGB(0.12), 8.0)
+//)
+//displayParameters(specHighlight, initWithFace, 9)
 ```
 
 Do not overdo it with the specular effects. It can quickly lead to a "glass" head appearance.
@@ -424,7 +428,7 @@ Do not overdo it with the specular effects. It can quickly lead to a "glass" hea
 ```scala mdoc:silent
 displayParameters(initWithFace.noEnvironmentMap.withDirectionalLight(
   DirectionalLight(RGB(0.4), RGB(0.6), EuclideanVector(1, 0, 1).normalize, RGB(0.4), 100.0)
-), initWithFace)
+), initWithFace, 10)
 ```
 
 ## Parametric Rendering
@@ -438,7 +442,7 @@ val momoRenderer = MoMoRenderer(model)
 
 // it renders images
 val modelImage = momoRenderer.renderImage(initWithFace)
-ImagePanel(modelImage).displayIn("Rendering")
+ImagePanel(modelImage).displayIn("Rendering B")
 
 // it renders landmarks positions
 val noseTipLM = momoRenderer.renderLandmark("center.nose.tip", initWithFace)
@@ -453,7 +457,7 @@ your scene setup but want to render your *own mesh*, not the model, then you can
 
 ```scala mdoc:silent
 val meshRendering = ParametricRenderer.renderParameterVertexColorMesh(init, face)
-ImagePanel(meshRendering).displayIn("Rendering")
+ImagePanel(meshRendering).displayIn("Rendering C")
 ```
 
 ## Summary

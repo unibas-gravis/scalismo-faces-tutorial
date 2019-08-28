@@ -29,7 +29,8 @@ implicit val rng = Random(1024L)
 
 Next we load the model from an `URI`:
 ```scala mdoc:silent
-val modelURI = new File("data/model2017-1_face12_nomouth.h5").toURI
+//val modelURI = new File("data/model2017-1_face12_nomouth.h5").toURI
+val modelURI = new File("data/model-bfm.h5").toURI
 val model = MoMoIO.read(modelURI).get
 ```
 
